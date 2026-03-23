@@ -48,12 +48,13 @@ const ItemForm = ({ type }) => {
       if (imageFile) formData.append('image', imageFile);
 
       // Use axios directly with explicit Authorization header
-      await axios.post('http://localhost:8080/api/items', formData, {
-        headers: {
-          'Authorization': `Bearer ${token}`,
-          // Do NOT set Content-Type — let browser set multipart boundary automatically
-        },
-      });
+	  const API = process.env.REACT_APP_API_URL || 'http://localhost:8080';
+
+	  await axios.post(`${API}/api/items`, formData, {
+	    headers: {
+	      Authorization: `Bearer ${token}`,
+	    },
+	  });
 
       navigate('/dashboard');
     } catch (err) {

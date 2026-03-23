@@ -15,22 +15,23 @@ const Home = () => {
     resolvedItems: 0,
   });
  
+  const API = process.env.REACT_APP_API_URL || 'http://localhost:8080';
+
   useEffect(() => {
-    // Fetch recent items
     itemService.getAll({ page: 0, size: 6, sortBy: 'createdAt', sortDir: 'desc' })
       .then(res => setRecentItems(res.data.content || []))
       .catch(console.error)
       .finally(() => setLoading(false));
- 
-    // Fetch accurate stats from dedicated public endpoint
-    axios.get('http://localhost:8080/api/stats')
+
+    axios.get(`${API}/api/stats`)
       .then(res => setStats({
-        totalItems:    res.data.totalItems    || 0,
-        lostItems:     res.data.lostItems     || 0,
-        foundItems:    res.data.foundItems    || 0,
+        totalItems: res.data.totalItems || 0,
+        lostItems: res.data.lostItems || 0,
+        foundItems: res.data.foundItems || 0,
         resolvedItems: res.data.resolvedItems || 0,
       }))
       .catch(console.error);
+
   }, []);
  
   return (

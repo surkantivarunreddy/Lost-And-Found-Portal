@@ -5,7 +5,7 @@ import { useAuth } from '../context/AuthContext';
 import './AdminDashboard.css';
  
 // ─── All admin actions go through /api/admin/* ───────
-const ADMIN_API = '${process.env.REACT_APP_API_URL}/api/admin';
+const ADMIN_API = `${process.env.REACT_APP_API_URL || 'http://localhost:8080'}/api/admin`;
  
 const getHeaders = () => ({
   'Content-Type': 'application/json',

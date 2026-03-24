@@ -2,7 +2,7 @@ import React, { useEffect, useState } from 'react';
 import { Link } from 'react-router-dom';
 import ItemCard from '../components/ItemCard';
 import { itemService } from '../services/itemService';
-import axios from 'axios';
+import api from '../services/api';
 import './Home.css';
  
 const Home = () => {
@@ -15,19 +15,17 @@ const Home = () => {
     resolvedItems: 0,
   });
  
-  const API = process.env.REACT_APP_API_URL || 'http://localhost:8080';
-
   useEffect(() => {
     itemService.getAll({ page: 0, size: 6, sortBy: 'createdAt', sortDir: 'desc' })
       .then(res => setRecentItems(res.data.content || []))
       .catch(console.error)
       .finally(() => setLoading(false));
 
-    axios.get(`${API}/api/stats`)
+    api.get('/stats')
       .then(res => setStats({
-        totalItems: res.data.totalItems || 0,
-        lostItems: res.data.lostItems || 0,
-        foundItems: res.data.foundItems || 0,
+        totalItems:    res.data.totalItems    || 0,
+        lostItems:     res.data.lostItems     || 0,
+        foundItems:    res.data.foundItems    || 0,
         resolvedItems: res.data.resolvedItems || 0,
       }))
       .catch(console.error);

@@ -32,7 +32,7 @@ const Dashboard = () => {
   useEffect(() => {
     Promise.all([
       itemService.getMyItems(),
-      axios.get(`${API}/messages/unread-count`, { headers: getHeaders() }),
+      axios.get(`${API}/api/messages/unread-count`, { headers: getHeaders() }),
     ]).then(([itemsRes, unreadRes]) => {
       setMyItems(itemsRes.data || []);
       setUnread(unreadRes.data.count || 0);
@@ -47,7 +47,7 @@ const Dashboard = () => {
  
   const loadConversations = async () => {
     try {
-      const res = await axios.get(`${API}/messages`, { headers: getHeaders() });
+      const res = await axios.get(`${API}/api/messages`, { headers: getHeaders() });
       const msgs = res.data || [];
       const convMap = {};
  
@@ -80,7 +80,7 @@ const Dashboard = () => {
     setReplyText('');
     try {
       const res = await axios.get(
-        `${API}/messages/conversation/${convo.userId}`,
+        `${API}/api/messages/conversation/${convo.userId}`,
         { headers: getHeaders() }
       );
       const msgs = res.data || [];
@@ -90,7 +90,7 @@ const Dashboard = () => {
       const unreadMsgs = msgs.filter(m => m.receiverId === user.id && !m.isRead);
       await Promise.all(
         unreadMsgs.map(m =>
-          axios.patch(`${API}/messages/${m.id}/read`, {}, { headers: getHeaders() })
+          axios.patch(`${API}/api/messages/${m.id}/read`, {}, { headers: getHeaders() })
         )
       );
       if (unreadMsgs.length > 0) {
@@ -115,7 +115,7 @@ const Dashboard = () => {
     const text = replyText.trim();
     setReplyText('');
     try {
-      const res = await axios.post(`${API}/messages`,
+      const res = await axios.post(`${API}/api/messages`,
         { receiverId: activeConvo.userId, content: text },
         { headers: getHeaders() }
       );

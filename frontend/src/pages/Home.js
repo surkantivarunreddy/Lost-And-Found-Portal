@@ -7,20 +7,21 @@ import './Home.css';
  
 const Home = () => {
   const [recentItems, setRecentItems] = useState([]);
-  const [loading, setLoading]         = useState(true);
-  const [stats, setStats]             = useState({
+  const [loading, setLoading] = useState(true);
+  const [stats, setStats] = useState({
     totalItems: 0,
-    lostItems:  0,
+    lostItems: 0,
     foundItems: 0,
     resolvedItems: 0,
   });
  
   useEffect(() => {
-    itemService.getAll({ page: 0, size: 6, sortBy: 'createdAt', sortDir: 'desc' })
+    // ✅ Fix: pass status=ACTIVE so we only show active items from ALL users
+    itemService.getAll({ page: 0, size: 6, sortBy: 'createdAt', sortDir: 'desc', status: 'ACTIVE' })
       .then(res => setRecentItems(res.data.content || []))
       .catch(console.error)
       .finally(() => setLoading(false));
-
+ 
     api.get('/api/stats')
       .then(res => setStats({
         totalItems:    res.data.totalItems    || 0,
@@ -29,12 +30,10 @@ const Home = () => {
         resolvedItems: res.data.resolvedItems || 0,
       }))
       .catch(console.error);
-
   }, []);
  
   return (
     <div className="home">
- 
       {/* ── Hero ─────────────────────────────────── */}
       <section className="hero">
         <div className="hero-content">
@@ -44,9 +43,9 @@ const Home = () => {
             Report a lost item or let others know what you've found.
           </p>
           <div className="hero-actions">
-            <Link to="/report-lost"  className="hero-btn hero-btn-primary">📋 Report Lost Item</Link>
+            <Link to="/report-lost" className="hero-btn hero-btn-primary">📋 Report Lost Item</Link>
             <Link to="/report-found" className="hero-btn hero-btn-secondary">✅ Report Found Item</Link>
-            <Link to="/search"       className="hero-btn hero-btn-white">🔎 Search Items</Link>
+            <Link to="/search" className="hero-btn hero-btn-white">🔎 Search Items</Link>
           </div>
         </div>
       </section>
@@ -59,17 +58,17 @@ const Home = () => {
           <span className="stat-label">Items Reported</span>
         </div>
         <div className="stat-card">
-          <span className="stat-icon">🔴</span>
+          <span className="stat-icon">🔍</span>
           <strong className="stat-number">{stats.lostItems}</strong>
           <span className="stat-label">Lost Items</span>
         </div>
         <div className="stat-card">
-          <span className="stat-icon">🟢</span>
+          <span className="stat-icon">✅</span>
           <strong className="stat-number">{stats.foundItems}</strong>
           <span className="stat-label">Found Items</span>
         </div>
         <div className="stat-card stat-card-highlight">
-          <span className="stat-icon">🤝</span>
+          <span className="stat-icon">🎉</span>
           <strong className="stat-number">{stats.resolvedItems}</strong>
           <span className="stat-label">Successfully Reunited</span>
         </div>
@@ -107,10 +106,10 @@ const Home = () => {
         </div>
  
         {loading ? (
-          <p className="loading-text">Loading items…</p>
+          <p className="loading-text">Loading items...</p>
         ) : recentItems.length === 0 ? (
           <div className="empty-state">
-            <span>😕</span>
+            <span>📭</span>
             <p>No items reported yet. Be the first!</p>
             <Link to="/report-lost" className="btn btn-primary">Report a Lost Item</Link>
           </div>
@@ -120,7 +119,6 @@ const Home = () => {
           </div>
         )}
       </section>
- 
     </div>
   );
 };

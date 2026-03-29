@@ -31,9 +31,6 @@ public class ItemService {
     private final MessageRepository messageRepository;
     private final UserRepository    userRepository;
  
-    // ✅ Fixed: removed hardcoded Windows path 'C:/MiniProject/...' as fallback.
-    //    On Render (Linux) that path never exists and image saves silently fail.
-    //    The correct default matches application.properties: /tmp/uploads/
     @Value("${app.upload.dir:/tmp/uploads/}")
     private String uploadDir;
  
@@ -72,13 +69,11 @@ public class ItemService {
  
     private String saveImage(MultipartFile image) {
         try {
-            // Ensure upload directory exists
             String dir = uploadDir.endsWith("/") ? uploadDir : uploadDir + "/";
             File uploadDirFile = new File(dir).getAbsoluteFile();
             if (!uploadDirFile.exists()) {
                 uploadDirFile.mkdirs();
             }
- 
             String filename = UUID.randomUUID() + "_" + image.getOriginalFilename();
             File dest = new File(uploadDirFile, filename);
             image.transferTo(dest);
@@ -89,18 +84,35 @@ public class ItemService {
     }
  
     // ── Read ──────────────────────────────────────────────
+    /**
+     * ✅ Fixed: When no status filter is provided, default to ACTIVE.
+     *    Previously it called findAll() which returned items from ALL users
+     *    with ALL statuses (RESOLVED, CLOSED included) - OR returned nothing
+     *    for other users because the query had no cross-user visibility.
+     *
+     *    Now:
+     *    - No filters        → all ACTIVE items (every user's items show up)
+     *    - type only         → ACTIVE items of that type
+     *    - type + status     → exact match (used by admin)
+     *    - status only       → items of that status (used by admin)
+     */
     public Page<ItemDto.Response> getAllItems(ItemType type, ItemStatus status, Pageable pageable) {
         if (type != null && status != null) {
             return itemRepository.findByTypeAndStatus(type, status, pageable).map(this::mapToResponse);
         } else if (type != null) {
-            return itemRepository.findByType(type, pageable).map(this::mapToResponse);
+            // Default to ACTIVE when browsing by type
+            return itemRepository.findByTypeAndStatus(type, ItemStatus.ACTIVE, pageable).map(this::mapToResponse);
+        } else if (status != null) {
+            return itemRepository.findByStatus(status, pageable).map(this::mapToResponse);
         }
-        return itemRepository.findAll(pageable).map(this::mapToResponse);
+        // ✅ Default: show only ACTIVE items from ALL users
+        return itemRepository.findByStatus(ItemStatus.ACTIVE, pageable).map(this::mapToResponse);
     }
  
     public Page<ItemDto.Response> searchItems(String keyword, ItemType type,
                                                String category, String location,
                                                Pageable pageable) {
+        // searchItems query already filters by status = ACTIVE in the JPQL
         return itemRepository.searchItems(keyword, type, category, location, pageable)
                 .map(this::mapToResponse);
     }

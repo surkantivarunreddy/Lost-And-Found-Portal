@@ -2,6 +2,17 @@ import React from 'react';
 import { Link } from 'react-router-dom';
 import './ItemCard.css';
  
+// ✅ Fix: Read API base URL once so images like "/uploads/abc.jpg"
+//    become "https://your-backend.onrender.com/uploads/abc.jpg"
+const API_BASE = process.env.REACT_APP_API_URL || 'http://localhost:8080';
+ 
+const getImageUrl = (url) => {
+  if (!url) return null;
+  if (url.startsWith('http://') || url.startsWith('https://')) return url;
+  // Relative path like /uploads/uuid_filename.jpg → prepend backend origin
+  return `${API_BASE}${url}`;
+};
+ 
 const ItemCard = ({ item, onDelete, onResolve }) => {
   const formatDate = (dateStr) => {
     if (!dateStr) return 'Date unknown';
@@ -11,13 +22,18 @@ const ItemCard = ({ item, onDelete, onResolve }) => {
   };
  
   const isResolved = item.status === 'RESOLVED';
+  const imgUrl = getImageUrl(item.imageUrl);
  
   return (
     <div className={`item-card ${isResolved ? 'item-card-resolved' : ''}`}>
-      {item.imageUrl && (
+      {/* ✅ Fix: use computed imgUrl with full backend origin, not raw item.imageUrl */}
+      {imgUrl && (
         <div className="item-img">
-          <img src={item.imageUrl} alt={item.title}
-               onError={e => e.target.style.display = 'none'} />
+          <img
+            src={imgUrl}
+            alt={item.title}
+            onError={e => e.target.style.display = 'none'}
+          />
         </div>
       )}
  
@@ -36,7 +52,7 @@ const ItemCard = ({ item, onDelete, onResolve }) => {
         {item.description && (
           <p className="item-desc">
             {item.description.substring(0, 120)}
-            {item.description.length > 120 ? '…' : ''}
+            {item.description.length > 120 ? '...' : ''}
           </p>
         )}
  
@@ -49,9 +65,11 @@ const ItemCard = ({ item, onDelete, onResolve }) => {
         <div className="item-footer">
           <span className="item-reporter">By {item.reportedByName}</span>
           <div className="item-actions">
-            <Link to={`/items/${item.id}`}
-                  className="btn btn-outline"
-                  style={{ fontSize: '0.8rem', padding: '0.3rem 0.8rem' }}>
+            <Link
+              to={`/items/${item.id}`}
+              className="btn btn-outline"
+              style={{ fontSize: '0.8rem', padding: '0.3rem 0.8rem' }}
+            >
               View Details
             </Link>
  
@@ -61,7 +79,8 @@ const ItemCard = ({ item, onDelete, onResolve }) => {
                 className="btn btn-resolve"
                 style={{ fontSize: '0.8rem', padding: '0.3rem 0.8rem' }}
                 onClick={() => onResolve(item.id)}
-                title="Mark as Reunited / Resolved">
+                title="Mark as Reunited / Resolved"
+              >
                 ✅ Resolved
               </button>
             )}
@@ -70,7 +89,8 @@ const ItemCard = ({ item, onDelete, onResolve }) => {
               <button
                 className="btn btn-danger"
                 style={{ fontSize: '0.8rem', padding: '0.3rem 0.8rem' }}
-                onClick={() => onDelete(item.id)}>
+                onClick={() => onDelete(item.id)}
+              >
                 Delete
               </button>
             )}

@@ -31,7 +31,10 @@ public class ItemService {
     private final MessageRepository messageRepository;
     private final UserRepository    userRepository;
  
-    @Value("${app.upload.dir:C:/MiniProject/LostAndFound/uploads/}")
+    // ✅ Fixed: removed hardcoded Windows path 'C:/MiniProject/...' as fallback.
+    //    On Render (Linux) that path never exists and image saves silently fail.
+    //    The correct default matches application.properties: /tmp/uploads/
+    @Value("${app.upload.dir:/tmp/uploads/}")
     private String uploadDir;
  
     public ItemService(ItemRepository itemRepository,
@@ -69,10 +72,15 @@ public class ItemService {
  
     private String saveImage(MultipartFile image) {
         try {
+            // Ensure upload directory exists
+            String dir = uploadDir.endsWith("/") ? uploadDir : uploadDir + "/";
+            File uploadDirFile = new File(dir).getAbsoluteFile();
+            if (!uploadDirFile.exists()) {
+                uploadDirFile.mkdirs();
+            }
+ 
             String filename = UUID.randomUUID() + "_" + image.getOriginalFilename();
-            String filePath = uploadDir + filename;
-            File dest = new File(filePath).getAbsoluteFile();
-            dest.getParentFile().mkdirs();
+            File dest = new File(uploadDirFile, filename);
             image.transferTo(dest);
             return "/uploads/" + filename;
         } catch (IOException e) {
@@ -140,9 +148,6 @@ public class ItemService {
             throw new UnauthorizedException("You can only delete your own items");
         }
  
-        // 1. Delete messages referencing this item (clears item_id FK constraint).
-        // 2. Hard-delete item via native SQL — avoids Hibernate stale-state error
-        //    ("Row was updated or deleted by another transaction").
         messageRepository.hardDeleteByItemId(id);
         itemRepository.hardDeleteById(id);
     }

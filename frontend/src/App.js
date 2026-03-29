@@ -6,19 +6,19 @@ import Footer from './components/Footer';
 import Home from './pages/Home';
 import Login from './pages/Login';
 import Register from './pages/Register';
-import { ReportLost, ReportFound } from './pages/ReportLost';
+import { ReportLost, ReportFound } from './pages/ReportLost'; // ✅ Fixed: was './p ages/ReportLost'
 import SearchItems from './pages/SearchItems';
 import Dashboard from './pages/Dashboard';
 import ItemDetail from './pages/ItemDetail';
 import AdminDashboard from './pages/AdminDashboard';
-
+ 
 // Redirect unauthenticated users to login
 const ProtectedRoute = ({ children }) => {
   const { user, loading } = useAuth();
   if (loading) return null;
   return user ? children : <Navigate to="/login" replace />;
 };
-
+ 
 // Redirect non-admins to dashboard
 const AdminRoute = ({ children }) => {
   const { user, loading } = useAuth();
@@ -27,30 +27,27 @@ const AdminRoute = ({ children }) => {
   if (user.role !== 'ADMIN') return <Navigate to="/dashboard" replace />;
   return children;
 };
-
+ 
 const AppRoutes = () => (
   <>
     <Navbar />
     <Routes>
-      <Route path="/"             element={<Home />} />
-      <Route path="/login"        element={<Login />} />
-      <Route path="/register"     element={<Register />} />
-      <Route path="/search"       element={<SearchItems />} />
-      <Route path="/items/:id"    element={<ItemDetail />} />
-
-      <Route path="/report-lost"  element={<ProtectedRoute><ReportLost /></ProtectedRoute>} />
+      <Route path="/" element={<Home />} />
+      <Route path="/login" element={<Login />} />
+      <Route path="/register" element={<Register />} />
+      <Route path="/search" element={<SearchItems />} />
+      <Route path="/items/:id" element={<ItemDetail />} />
+      <Route path="/report-lost" element={<ProtectedRoute><ReportLost /></ProtectedRoute>} />
       <Route path="/report-found" element={<ProtectedRoute><ReportFound /></ProtectedRoute>} />
-      <Route path="/dashboard"    element={<ProtectedRoute><Dashboard /></ProtectedRoute>} />
-
+      <Route path="/dashboard" element={<ProtectedRoute><Dashboard /></ProtectedRoute>} />
       {/* Admin-only */}
-      <Route path="/admin"        element={<AdminRoute><AdminDashboard /></AdminRoute>} />
-
+      <Route path="/admin" element={<AdminRoute><AdminDashboard /></AdminRoute>} />
       <Route path="*" element={<Navigate to="/" replace />} />
     </Routes>
     <Footer />
   </>
 );
-
+ 
 const App = () => (
   <BrowserRouter>
     <AuthProvider>
@@ -58,5 +55,5 @@ const App = () => (
     </AuthProvider>
   </BrowserRouter>
 );
-
+ 
 export default App;

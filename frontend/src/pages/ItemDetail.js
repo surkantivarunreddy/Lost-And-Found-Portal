@@ -13,23 +13,22 @@ const getHeaders = () => ({
 });
  
 const ItemDetail = () => {
-  const { id }       = useParams();
-  const { user }     = useAuth();
-  const navigate     = useNavigate();
- 
-  const [item,        setItem]        = useState(null);
-  const [loading,     setLoading]     = useState(true);
-  const [error,       setError]       = useState('');
+  const { id } = useParams();
+  const { user } = useAuth();
+  const navigate = useNavigate();
+  const [item, setItem] = useState(null);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState('');
  
   // Message modal state
-  const [showModal,   setShowModal]   = useState(false);
-  const [msgText,     setMsgText]     = useState('');
-  const [sending,     setSending]     = useState(false);
-  const [msgSuccess,  setMsgSuccess]  = useState('');
-  const [msgError,    setMsgError]    = useState('');
+  const [showModal, setShowModal] = useState(false);
+  const [msgText, setMsgText] = useState('');
+  const [sending, setSending] = useState(false);
+  const [msgSuccess, setMsgSuccess] = useState('');
+  const [msgError, setMsgError] = useState('');
  
   // Resolve state
-  const [resolving,   setResolving]   = useState(false);
+  const [resolving, setResolving] = useState(false);
  
   useEffect(() => {
     itemService.getById(id)
@@ -58,12 +57,12 @@ const ItemDetail = () => {
     setSending(true);
     setMsgError('');
     try {
-      await axios.post(`${API}/messages`, {
+      // ✅ Fixed: was '/messages' (missing /api prefix)
+      await axios.post(`${API}/api/messages`, {
         receiverId: item.reportedById,
-        itemId:     item.id,
-        content:    msgText.trim(),
+        itemId: item.id,
+        content: msgText.trim(),
       }, { headers: getHeaders() });
- 
       setMsgSuccess('Message sent! The reporter will see it in their Dashboard → Messages.');
       setMsgText('');
       setTimeout(() => {
@@ -82,7 +81,8 @@ const ItemDetail = () => {
     if (!window.confirm('Mark this item as Resolved / Reunited?')) return;
     setResolving(true);
     try {
-      await axios.put(`${API}/items/${item.id}`,
+      // ✅ Fixed: was '/items/${item.id}' (missing /api prefix)
+      await axios.put(`${API}/api/items/${item.id}`,
         { status: 'RESOLVED' },
         { headers: getHeaders() });
       setItem(prev => ({ ...prev, status: 'RESOLVED' }));
@@ -93,33 +93,30 @@ const ItemDetail = () => {
     }
   };
  
-  if (loading) return <div className="detail-loading">Loading…</div>;
-  if (error)   return <div className="detail-error">{error}</div>;
-  if (!item)   return null;
+  if (loading) return <div className="detail-loading">Loading...</div>;
+  if (error) return <div className="detail-error">{error}</div>;
+  if (!item) return null;
  
-  const isOwner    = user && user.id === item.reportedById;
+  const isOwner = user && user.id === item.reportedById;
   const isResolved = item.status === 'RESOLVED';
   const isLoggedIn = !!user;
  
   return (
     <div className="detail-page container">
- 
       {/* Back */}
       <button className="back-btn" onClick={() => navigate(-1)}>← Back</button>
  
       <div className="detail-card">
- 
         {/* Image */}
         {item.imageUrl && (
           <div className="detail-img-wrap">
             <img src={getImageUrl(item.imageUrl)} alt={item.title}
-                 onError={e => e.target.parentElement.style.display = 'none'} />
+              onError={e => e.target.parentElement.style.display = 'none'} />
             {isResolved && <div className="detail-resolved-banner">✅ Reunited</div>}
           </div>
         )}
  
         <div className="detail-body">
- 
           {/* Badges */}
           <div className="detail-badges">
             <span className={`badge badge-${item.type?.toLowerCase()}`}>{item.type}</span>
@@ -128,7 +125,6 @@ const ItemDetail = () => {
           </div>
  
           <h1 className="detail-title">{item.title}</h1>
- 
           {item.description && (
             <p className="detail-desc">{item.description}</p>
           )}
@@ -176,7 +172,7 @@ const ItemDetail = () => {
               <div className="contact-btns">
                 {item.contactEmail && (
                   <a href={`mailto:${item.contactEmail}?subject=Re: ${item.title} on Lost & Found Portal`}
-                     className="contact-btn contact-email">
+                    className="contact-btn contact-email">
                     ✉️ {item.contactEmail}
                   </a>
                 )}
@@ -191,7 +187,6 @@ const ItemDetail = () => {
  
           {/* Action buttons */}
           <div className="detail-actions">
- 
             {/* Send in-app message — shown to logged-in non-owners */}
             {isLoggedIn && !isOwner && !isResolved && (
               <button className="btn btn-primary" onClick={() => setShowModal(true)}>
@@ -212,7 +207,7 @@ const ItemDetail = () => {
                 className="btn btn-resolve"
                 onClick={handleResolve}
                 disabled={resolving}>
-                {resolving ? 'Updating…' : '✅ Mark as Resolved (Item Returned)'}
+                {resolving ? 'Updating...' : '✅ Mark as Resolved (Item Returned)'}
               </button>
             )}
  
@@ -222,7 +217,6 @@ const ItemDetail = () => {
               </div>
             )}
           </div>
- 
         </div>
       </div>
  
@@ -234,11 +228,9 @@ const ItemDetail = () => {
               <h2>💬 Message Reporter</h2>
               <button className="modal-close" onClick={() => setShowModal(false)}>✕</button>
             </div>
- 
             <p className="modal-sub">
               Sending to <strong>{item.reportedByName}</strong> about <em>"{item.title}"</em>
             </p>
- 
             {msgSuccess ? (
               <div className="msg-success">{msgSuccess}</div>
             ) : (
@@ -248,8 +240,8 @@ const ItemDetail = () => {
                   rows={5}
                   placeholder={
                     item.type === 'LOST'
-                      ? `Hi, I think I found your ${item.title}. Here's what I know…`
-                      : `Hi, I lost a ${item.title}. I think it might be mine because…`
+                      ? `Hi, I think I found your ${item.title}. Here's what I know...`
+                      : `Hi, I lost a ${item.title}. I think it might be mine because...`
                   }
                   value={msgText}
                   onChange={e => setMsgText(e.target.value)}
@@ -258,11 +250,11 @@ const ItemDetail = () => {
                 {msgError && <div className="msg-error">{msgError}</div>}
                 <div className="modal-footer">
                   <button type="button" className="btn btn-outline"
-                          onClick={() => setShowModal(false)}>
+                    onClick={() => setShowModal(false)}>
                     Cancel
                   </button>
                   <button type="submit" className="btn btn-primary" disabled={sending}>
-                    {sending ? 'Sending…' : '📤 Send Message'}
+                    {sending ? 'Sending...' : '📤 Send Message'}
                   </button>
                 </div>
               </form>
@@ -270,7 +262,6 @@ const ItemDetail = () => {
           </div>
         </div>
       )}
- 
     </div>
   );
 };

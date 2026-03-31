@@ -71,6 +71,7 @@ public class ItemService {
                 .contactEmail(request.getContactEmail())
                 .contactPhone(request.getContactPhone())
                 .reportedBy(currentUser)
+                .status(ItemStatus.ACTIVE)
                 .build();
 
         return mapToResponse(itemRepository.save(item));

@@ -18,18 +18,25 @@ const SearchItems = () => {
   const fetchItems = useCallback(async () => {
     setLoading(true);
     try {
-      // ✅ Fix: always pass page and size; only include non-empty filter params
-      const params = { page, size: 9 };
-      if (filters.keyword)  params.keyword  = filters.keyword;
-      if (filters.type)     params.type     = filters.type;
+      const params = {
+        page,
+        size: 9
+      };
+
+      if (filters.keyword) params.keyword = filters.keyword;
+      if (filters.type) params.type = filters.type;
       if (filters.category) params.category = filters.category;
       if (filters.location) params.location = filters.location;
- 
+
       const res = await itemService.search(params);
-      setItems(res.data.content || []);
-      setTotal(res.data.totalElements || 0);
+
+      console.log(res.data); // 🔍 DEBUG
+
+      setItems(res.data.content ? res.data.content : res.data);
+      setTotal(res.data.totalElements || res.data.length || 0);
+
     } catch (e) {
-      console.error(e);
+      console.error("Search error:", e);
     } finally {
       setLoading(false);
     }

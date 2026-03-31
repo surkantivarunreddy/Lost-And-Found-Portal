@@ -76,14 +76,28 @@ public class ItemController {
     @GetMapping("/search")
     public ResponseEntity<Page<ItemDto.Response>> searchItems(
             @RequestParam(required = false) String keyword,
-            @RequestParam(required = false) ItemType type,
+            @RequestParam(required = false) String type,   // ✅ changed
             @RequestParam(required = false) String category,
             @RequestParam(required = false) String location,
             @RequestParam(defaultValue = "0")  int page,
             @RequestParam(defaultValue = "10") int size) {
 
         Pageable pageable = PageRequest.of(page, size, Sort.by("createdAt").descending());
-        return ResponseEntity.ok(itemService.searchItems(keyword, type, category, location, pageable));
+
+        ItemType typeEnum = null;
+
+        // ✅ Safe conversion (VERY IMPORTANT)
+        if (type != null && !type.trim().isEmpty()) {
+            try {
+                typeEnum = ItemType.valueOf(type.toUpperCase());
+            } catch (IllegalArgumentException e) {
+                throw new RuntimeException("Invalid type value: " + type);
+            }
+        }
+
+        return ResponseEntity.ok(
+            itemService.searchItems(keyword, typeEnum, category, location, pageable)
+        );
     }
 
     @GetMapping("/{id}")

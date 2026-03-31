@@ -30,10 +30,11 @@ public interface ItemRepository extends JpaRepository<Item, Long> {
     long countByReportedById(Long userId);
 
     @Query("SELECT i FROM Item i WHERE " +
-           "(:keyword IS NULL OR LOWER(i.title) LIKE LOWER(CONCAT('%', :keyword, '%')) " +
-           "OR LOWER(i.description) LIKE LOWER(CONCAT('%', :keyword, '%'))) " +
+           "(:keyword IS NULL OR :keyword = '' OR \r\n"
+           + " LOWER(i.title) LIKE LOWER(CONCAT('%', :keyword, '%')) \r\n"
+           + " OR LOWER(i.description) LIKE LOWER(CONCAT('%', :keyword, '%'))) " +
            "AND (:type IS NULL OR i.type = :type) " +
-           "AND (:category IS NULL OR i.category = :category) " +
+           "AND (:category IS NULL OR LOWER(i.category) = LOWER(:category)) " +
            "AND (:location IS NULL OR LOWER(i.location) LIKE LOWER(CONCAT('%', :location, '%'))) " +
            "AND i.status = 'ACTIVE'")
     Page<Item> searchItems(

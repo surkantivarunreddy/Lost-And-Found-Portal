@@ -43,8 +43,13 @@ public class ItemController {
         request.setType(type);
         request.setCategory(category);
         request.setLocation(location);
-        request.setDateLostFound(dateLostFound != null && !dateLostFound.isEmpty()
-                ? java.time.LocalDate.parse(dateLostFound) : null);
+        if (dateLostFound != null && !dateLostFound.isEmpty()) {
+            try {
+                request.setDateLostFound(java.time.LocalDate.parse(dateLostFound));
+            } catch (Exception e) {
+                throw new RuntimeException("Invalid date format. Use YYYY-MM-DD");
+            }
+        }
         request.setContactEmail(contactEmail);
         request.setContactPhone(contactPhone);
 

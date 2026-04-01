@@ -14,8 +14,8 @@ public class Message {
     @GeneratedValue(strategy = GenerationType.IDENTITY)
     private Long id;
 
-    // Content is now optional when an image is sent
-    @Column(columnDefinition = "TEXT")
+    @NotBlank
+    @Column(columnDefinition = "TEXT", nullable = false)
     private String content;
 
     @ManyToOne(fetch = FetchType.EAGER)
@@ -33,10 +33,6 @@ public class Message {
     @Column(name = "is_read")
     private boolean isRead = false;
 
-    // Cloudinary URL for image attachments in messages
-    @Column(name = "image_url")
-    private String imageUrl;
-
     @CreationTimestamp
     @Column(updatable = false)
     private LocalDateTime sentAt;
@@ -45,51 +41,49 @@ public class Message {
     public Message() {}
 
     // --- Getters ---
-    public Long getId()             { return id; }
-    public String getContent()      { return content; }
-    public User getSender()         { return sender; }
-    public User getReceiver()       { return receiver; }
-    public Item getItem()           { return item; }
-    public boolean isRead()         { return isRead; }
-    public String getImageUrl()     { return imageUrl; }
-    public LocalDateTime getSentAt(){ return sentAt; }
+    public Long getId() { return id; }
+    public String getContent() { return content; }
+    public User getSender() { return sender; }
+    public User getReceiver() { return receiver; }
+    public Item getItem() { return item; }
+    public boolean isRead() { return isRead; }
+    public LocalDateTime getSentAt() { return sentAt; }
 
     // --- Setters ---
-    public void setId(Long id)              { this.id = id; }
-    public void setContent(String content)  { this.content = content; }
-    public void setSender(User sender)      { this.sender = sender; }
-    public void setReceiver(User receiver)  { this.receiver = receiver; }
-    public void setItem(Item item)          { this.item = item; }
-    public void setRead(boolean read)       { isRead = read; }
-    public void setImageUrl(String imageUrl){ this.imageUrl = imageUrl; }
-    public void setSentAt(LocalDateTime sentAt){ this.sentAt = sentAt; }
+    public void setId(Long id) { this.id = id; }
+    public void setContent(String content) { this.content = content; }
+    public void setSender(User sender) { this.sender = sender; }
+    public void setReceiver(User receiver) { this.receiver = receiver; }
+    public void setItem(Item item) { this.item = item; }
+    public void setRead(boolean read) { isRead = read; }
+    public void setSentAt(LocalDateTime sentAt) { this.sentAt = sentAt; }
 
     // --- Builder ---
     public static Builder builder() { return new Builder(); }
 
     public static class Builder {
+        private Long id;
         private String content;
         private User sender;
         private User receiver;
         private Item item;
         private boolean isRead = false;
-        private String imageUrl;
 
-        public Builder content(String content)      { this.content = content; return this; }
-        public Builder sender(User sender)          { this.sender = sender; return this; }
-        public Builder receiver(User receiver)      { this.receiver = receiver; return this; }
-        public Builder item(Item item)              { this.item = item; return this; }
-        public Builder isRead(boolean isRead)       { this.isRead = isRead; return this; }
-        public Builder imageUrl(String imageUrl)    { this.imageUrl = imageUrl; return this; }
+        public Builder id(Long id) { this.id = id; return this; }
+        public Builder content(String content) { this.content = content; return this; }
+        public Builder sender(User sender) { this.sender = sender; return this; }
+        public Builder receiver(User receiver) { this.receiver = receiver; return this; }
+        public Builder item(Item item) { this.item = item; return this; }
+        public Builder isRead(boolean isRead) { this.isRead = isRead; return this; }
 
         public Message build() {
             Message m = new Message();
-            m.content  = this.content;
-            m.sender   = this.sender;
+            m.id = this.id;
+            m.content = this.content;
+            m.sender = this.sender;
             m.receiver = this.receiver;
-            m.item     = this.item;
-            m.isRead   = this.isRead;
-            m.imageUrl = this.imageUrl;
+            m.item = this.item;
+            m.isRead = this.isRead;
             return m;
         }
     }

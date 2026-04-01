@@ -1,93 +1,58 @@
 import React, { useState, useEffect, useCallback } from 'react';
 import ItemCard from '../components/ItemCard';
-import './SearchItems.css';
-
-const API = process.env.REACT_APP_API_URL || 'http://localhost:8080';
-
-const getHeaders = () => ({
-  'Content-Type': 'application/json',
-  ...(localStorage.getItem('token') && {
-    Authorization: `Bearer ${localStorage.getItem('token')}`,
-  }),
-});
-
-const CATEGORIES = [
-  '', 'Electronics', 'Wallet/Purse', 'Keys', 'Bag/Backpack',
-  'Clothing', 'Jewelry', 'Documents', 'Pet', 'Other',
-];
-
+import { itemService } from '../services/itemService';
+import './SearchItems.css';  // ✅ Fix: was './SearchItem.css' (missing the 's')
+ 
+const CATEGORIES = ['', 'Electronics', 'Wallet/Purse', 'Keys', 'Bag/Backpack',
+  'Clothing', 'Jewelry', 'Documents', 'Pet', 'Other'];
+ 
 const SearchItems = () => {
   const [items, setItems] = useState([]);
   const [total, setTotal] = useState(0);
   const [page, setPage] = useState(0);
   const [loading, setLoading] = useState(false);
-  const [error, setError] = useState('');
   const [filters, setFilters] = useState({
     keyword: '', type: '', category: '', location: '',
   });
-
+ 
   const fetchItems = useCallback(async () => {
     setLoading(true);
-    setError('');
     try {
-      const queryParams = new URLSearchParams();
-      queryParams.set('page', page);
-      queryParams.set('size', 9);
-      if (filters.keyword.trim())   queryParams.set('keyword',  filters.keyword.trim());
-      if (filters.type)             queryParams.set('type',     filters.type);
-      if (filters.category)         queryParams.set('category', filters.category);
-      if (filters.location.trim())  queryParams.set('location', filters.location.trim());
+      const params = {
+        page,
+        size: 9
+      };
 
-      const url = `${API}/api/items/search?${queryParams.toString()}`;
-      const res = await fetch(url, { headers: getHeaders() });
+      if (filters.keyword) params.keyword = filters.keyword;
+      if (filters.type) params.type = filters.type;
+      if (filters.category) params.category = filters.category;
+      if (filters.location) params.location = filters.location;
 
-      if (!res.ok) {
-        const msg = await res.text();
-        throw new Error(msg || `HTTP ${res.status}`);
-      }
+      const res = await itemService.search(params);
 
-      const data = await res.json();
+      console.log(res.data); // 🔍 DEBUG
 
-      // Spring Page<T> → { content: [...], totalElements: N }
-      if (data && Array.isArray(data.content)) {
-        setItems(data.content);
-        setTotal(data.totalElements ?? data.content.length);
-      } else if (Array.isArray(data)) {
-        setItems(data);
-        setTotal(data.length);
-      } else {
-        setItems([]);
-        setTotal(0);
-      }
+      setItems(res.data.content ? res.data.content : res.data);
+      setTotal(res.data.totalElements || res.data.length || 0);
+
     } catch (e) {
-      console.error('Search error:', e);
-      setError('Failed to load items. Please try again.');
-      setItems([]);
-      setTotal(0);
+      console.error("Search error:", e);
     } finally {
       setLoading(false);
     }
   }, [page, filters]);
-
+ 
   useEffect(() => { fetchItems(); }, [fetchItems]);
-
-  const handleFilterChange = (e) => {
-    setFilters((prev) => ({ ...prev, [e.target.name]: e.target.value }));
+ 
+  const handleFilterChange = e => {
+    setFilters({ ...filters, [e.target.name]: e.target.value });
     setPage(0);
   };
-
-  const handleClear = () => {
-    setFilters({ keyword: '', type: '', category: '', location: '' });
-    setPage(0);
-  };
-
-  const hasFilters = filters.keyword || filters.type || filters.category || filters.location;
-  const totalPages = Math.ceil(total / 9);
-
+ 
   return (
     <div className="search-page container">
       <h1 className="page-title">🔎 Search Items</h1>
-
+ 
       {/* Filters */}
       <div className="search-filters card">
         <input
@@ -103,9 +68,7 @@ const SearchItems = () => {
           <option value="FOUND">Found</option>
         </select>
         <select name="category" value={filters.category} onChange={handleFilterChange}>
-          {CATEGORIES.map((c) => (
-            <option key={c} value={c}>{c || 'All Categories'}</option>
-          ))}
+          {CATEGORIES.map(c => <option key={c} value={c}>{c || 'All Categories'}</option>)}
         </select>
         <input
           name="location"
@@ -113,70 +76,33 @@ const SearchItems = () => {
           onChange={handleFilterChange}
           placeholder="Filter by location..."
         />
-        {hasFilters && (
-          <button className="btn btn-outline" onClick={handleClear} style={{ whiteSpace: 'nowrap' }}>
-            ✕ Clear
-          </button>
-        )}
       </div>
-
-      {/* Result count */}
-      {!loading && !error && (
-        <p className="results-count">{total} result{total !== 1 ? 's' : ''} found</p>
-      )}
-
-      {/* Error state */}
-      {error && (
+ 
+      {/* Results */}
+      <p className="results-count">{total} result{total !== 1 ? 's' : ''} found</p>
+ 
+      {loading ? (
+        <p className="loading-text">Searching...</p>
+      ) : items.length === 0 ? (
         <div className="no-results">
-          <span>⚠️</span>
-          <p>{error}</p>
-          <button className="btn btn-primary" onClick={fetchItems} style={{ marginTop: '0.75rem' }}>
-            Retry
-          </button>
+          <span>��</span>
+          <p>No items match your search. Try different keywords.</p>
         </div>
-      )}
-
-      {/* Loading */}
-      {loading && (
-        <div className="search-loading">
-          <div className="search-spinner" />
-          <p>Searching...</p>
-        </div>
-      )}
-
-      {/* Empty */}
-      {!loading && !error && items.length === 0 && (
-        <div className="no-results">
-          <span>📭</span>
-          <p>No items match your search. Try different keywords or clear filters.</p>
-        </div>
-      )}
-
-      {/* Grid */}
-      {!loading && !error && items.length > 0 && (
+      ) : (
         <div className="grid-3">
-          {items.map((item) => (
-            <ItemCard key={item.id} item={item} />
-          ))}
+          {items.map(item => <ItemCard key={item.id} item={item} />)}
         </div>
       )}
-
+ 
       {/* Pagination */}
-      {totalPages > 1 && (
+      {total > 9 && (
         <div className="pagination">
-          <button
-            className="btn btn-outline"
-            disabled={page === 0}
-            onClick={() => setPage((p) => p - 1)}
-          >
+          <button className="btn btn-outline" disabled={page === 0} onClick={() => setPage(p => p - 1)}>
             ← Previous
           </button>
-          <span>Page {page + 1} of {totalPages}</span>
-          <button
-            className="btn btn-outline"
-            disabled={page + 1 >= totalPages}
-            onClick={() => setPage((p) => p + 1)}
-          >
+          <span>Page {page + 1} of {Math.ceil(total / 9)}</span>
+          <button className="btn btn-outline" disabled={(page + 1) * 9 >= total}
+            onClick={() => setPage(p => p + 1)}>
             Next →
           </button>
         </div>
@@ -184,5 +110,5 @@ const SearchItems = () => {
     </div>
   );
 };
-
+ 
 export default SearchItems;

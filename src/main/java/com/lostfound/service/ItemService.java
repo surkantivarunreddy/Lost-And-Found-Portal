@@ -36,10 +36,10 @@ public class ItemService {
                        MessageRepository messageRepository,
                        UserRepository userRepository,
                        Cloudinary cloudinary) {
-        this.itemRepository = itemRepository;
+        this.itemRepository   = itemRepository;
         this.messageRepository = messageRepository;
-        this.userRepository = userRepository;
-        this.cloudinary = cloudinary;
+        this.userRepository   = userRepository;
+        this.cloudinary       = cloudinary;
     }
 
     public ItemDto.Response createItem(ItemDto.CreateRequest request, MultipartFile image) {
@@ -81,22 +81,17 @@ public class ItemService {
     }
 
     /**
-     * FIX: Pass enum values as .name() strings to match the native SQL
-     * query signature in ItemRepository (which expects String, not enum).
+     * FIX: Convert enums to .name() strings for the native SQL query.
+     * The Pageable passed here must NOT contain a Sort (handled in ItemController).
      */
     public Page<ItemDto.Response> searchItems(String keyword, ItemType type,
                                               String category, String location,
                                               Pageable pageable) {
         String typeStr   = (type != null) ? type.name() : null;
-        String statusStr = ItemStatus.ACTIVE.name(); // always search only ACTIVE items
+        String statusStr = ItemStatus.ACTIVE.name();
 
         return itemRepository.searchItems(
-                keyword,
-                typeStr,
-                category,
-                location,
-                statusStr,
-                pageable
+                keyword, typeStr, category, location, statusStr, pageable
         ).map(this::mapToResponse);
     }
 
@@ -139,8 +134,6 @@ public class ItemService {
         messageRepository.hardDeleteByItemId(id);
         itemRepository.hardDeleteById(id);
     }
-
-    // ── Helpers ──────────────────────────────────────────────────────────────
 
     private Item findItemOrThrow(Long id) {
         return itemRepository.findById(id)

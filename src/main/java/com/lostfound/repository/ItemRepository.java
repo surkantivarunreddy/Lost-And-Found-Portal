@@ -24,43 +24,48 @@ public interface ItemRepository extends JpaRepository<Item, Long> {
     long countByReportedById(Long userId);
 
     /**
-     * FIX: Switched from JPQL to native SQL.
+     * DEFINITIVE FIX - two changes together eliminate the 500 errors:
      *
-     * ROOT CAUSE of 500 errors: Hibernate's JPQL binding of Java enums against
-     * PostgreSQL VARCHAR columns fails when params are null OR when category
-     * contains '/' characters (e.g. "Wallet/Purse"). Native SQL treats all
-     * params as plain strings — no enum binding, no crashes.
+     * Fix 1 (this file): nativeQuery=true avoids Hibernate enum binding bugs.
+     *   All enum params are plain Strings. ORDER BY uses the real column
+     *   name "created_at" hardcoded in SQL.
+     *
+     * Fix 2 (ItemController): PageRequest.of(page, size) with NO Sort.
+     *   Spring Data was injecting ORDER BY createdAt DESC (Java field name)
+     *   into the SQL, but PostgreSQL column is "created_at" -> crash.
+     *
+     * Both fixes are required together.
      */
-    @Query(value = """
-            SELECT * FROM items i
-            WHERE i.status = :status
-              AND (:type     IS NULL OR :type     = '' OR i.type     = :type)
-              AND (:keyword  IS NULL OR :keyword  = ''
-                   OR LOWER(i.title)       LIKE LOWER(CONCAT('%', :keyword, '%'))
-                   OR LOWER(i.description) LIKE LOWER(CONCAT('%', :keyword, '%')))
-              AND (:category IS NULL OR :category = '' OR i.category = :category)
-              AND (:location IS NULL OR :location = ''
-                   OR LOWER(i.location) LIKE LOWER(CONCAT('%', :location, '%')))
-            ORDER BY i.created_at DESC
-            """,
-            countQuery = """
-            SELECT COUNT(*) FROM items i
-            WHERE i.status = :status
-              AND (:type     IS NULL OR :type     = '' OR i.type     = :type)
-              AND (:keyword  IS NULL OR :keyword  = ''
-                   OR LOWER(i.title)       LIKE LOWER(CONCAT('%', :keyword, '%'))
-                   OR LOWER(i.description) LIKE LOWER(CONCAT('%', :keyword, '%')))
-              AND (:category IS NULL OR :category = '' OR i.category = :category)
-              AND (:location IS NULL OR :location = ''
-                   OR LOWER(i.location) LIKE LOWER(CONCAT('%', :location, '%')))
-            """,
-            nativeQuery = true)
+    @Query(
+        value =
+            "SELECT * FROM items i " +
+            "WHERE i.status = :status " +
+            "AND (:type IS NULL OR :type = '' OR i.type = :type) " +
+            "AND (:keyword IS NULL OR :keyword = '' " +
+            "     OR LOWER(i.title) LIKE LOWER(CONCAT('%', :keyword, '%')) " +
+            "     OR LOWER(i.description) LIKE LOWER(CONCAT('%', :keyword, '%'))) " +
+            "AND (:category IS NULL OR :category = '' OR i.category = :category) " +
+            "AND (:location IS NULL OR :location = '' " +
+            "     OR LOWER(i.location) LIKE LOWER(CONCAT('%', :location, '%'))) " +
+            "ORDER BY i.created_at DESC",
+        countQuery =
+            "SELECT COUNT(*) FROM items i " +
+            "WHERE i.status = :status " +
+            "AND (:type IS NULL OR :type = '' OR i.type = :type) " +
+            "AND (:keyword IS NULL OR :keyword = '' " +
+            "     OR LOWER(i.title) LIKE LOWER(CONCAT('%', :keyword, '%')) " +
+            "     OR LOWER(i.description) LIKE LOWER(CONCAT('%', :keyword, '%'))) " +
+            "AND (:category IS NULL OR :category = '' OR i.category = :category) " +
+            "AND (:location IS NULL OR :location = '' " +
+            "     OR LOWER(i.location) LIKE LOWER(CONCAT('%', :location, '%')))",
+        nativeQuery = true
+    )
     Page<Item> searchItems(
             @Param("keyword")  String keyword,
-            @Param("type")     String type,     // String, NOT ItemType enum
+            @Param("type")     String type,
             @Param("category") String category,
             @Param("location") String location,
-            @Param("status")   String status,   // String, NOT ItemStatus enum
+            @Param("status")   String status,
             Pageable pageable
     );
 

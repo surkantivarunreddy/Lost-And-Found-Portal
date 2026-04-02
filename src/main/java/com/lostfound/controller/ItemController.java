@@ -27,15 +27,15 @@ public class ItemController {
 
     @PostMapping(consumes = {"multipart/form-data"})
     public ResponseEntity<ItemDto.Response> createItem(
-            @RequestParam("title")                        String title,
-            @RequestParam(value = "description",  required = false) String description,
-            @RequestParam("type")                         ItemType type,
-            @RequestParam(value = "category",     required = false) String category,
-            @RequestParam(value = "location",     required = false) String location,
-            @RequestParam(value = "dateLostFound",required = false) String dateLostFound,
+            @RequestParam("title") String title,
+            @RequestParam(value = "description", required = false) String description,
+            @RequestParam("type") ItemType type,
+            @RequestParam(value = "category", required = false) String category,
+            @RequestParam(value = "location", required = false) String location,
+            @RequestParam(value = "dateLostFound", required = false) String dateLostFound,
             @RequestParam(value = "contactEmail", required = false) String contactEmail,
             @RequestParam(value = "contactPhone", required = false) String contactPhone,
-            @RequestParam(value = "image",        required = false) MultipartFile image) {
+            @RequestParam(value = "image", required = false) MultipartFile image) {
 
         ItemDto.CreateRequest request = new ItemDto.CreateRequest();
         request.setTitle(title);
@@ -52,7 +52,6 @@ public class ItemController {
         }
         request.setContactEmail(contactEmail);
         request.setContactPhone(contactPhone);
-
         return ResponseEntity.status(HttpStatus.CREATED)
                 .body(itemService.createItem(request, image));
     }
@@ -61,8 +60,8 @@ public class ItemController {
     public ResponseEntity<Page<ItemDto.Response>> getAllItems(
             @RequestParam(required = false) ItemType type,
             @RequestParam(required = false) ItemStatus status,
-            @RequestParam(defaultValue = "0")    int page,
-            @RequestParam(defaultValue = "10")   int size,
+            @RequestParam(defaultValue = "0") int page,
+            @RequestParam(defaultValue = "10") int size,
             @RequestParam(defaultValue = "createdAt") String sortBy,
             @RequestParam(defaultValue = "desc") String sortDir) {
 
@@ -76,17 +75,29 @@ public class ItemController {
     @GetMapping("/search")
     public ResponseEntity<Page<ItemDto.Response>> searchItems(
             @RequestParam(required = false) String keyword,
-            @RequestParam(required = false) String type,   // ✅ changed
+            @RequestParam(required = false) String type,
             @RequestParam(required = false) String category,
             @RequestParam(required = false) String location,
-            @RequestParam(defaultValue = "0")  int page,
-            @RequestParam(defaultValue = "10") int size) {
+            @RequestParam(defaultValue = "0") int page,
+            @RequestParam(defaultValue = "9") int size) {
 
-        Pageable pageable = PageRequest.of(page, size, Sort.by("createdAt").descending());
+        // FIX: Use PageRequest WITHOUT Sort.
+        //
+        // ROOT CAUSE of 500 errors: the previous code passed
+        //   PageRequest.of(page, size, Sort.by("createdAt").descending())
+        // to a nativeQuery=true repository method.
+        //
+        // Spring Data JPA injects the Sort clause into the native SQL as
+        //   ORDER BY createdAt DESC
+        // using the JAVA field name. PostgreSQL has no column called
+        // "createdAt" (the real column is "created_at"), so every call
+        // throws a PSQLException -> 500.
+        //
+        // The ORDER BY is already hardcoded inside the native SQL in
+        // ItemRepository, so no Sort is needed here at all.
+        Pageable pageable = PageRequest.of(page, size); // ← NO Sort
 
         ItemType typeEnum = null;
-
-        // ✅ Safe conversion (VERY IMPORTANT)
         if (type != null && !type.trim().isEmpty()) {
             try {
                 typeEnum = ItemType.valueOf(type.toUpperCase());
@@ -96,7 +107,7 @@ public class ItemController {
         }
 
         return ResponseEntity.ok(
-            itemService.searchItems(keyword, typeEnum, category, location, pageable)
+                itemService.searchItems(keyword, typeEnum, category, location, pageable)
         );
     }
 

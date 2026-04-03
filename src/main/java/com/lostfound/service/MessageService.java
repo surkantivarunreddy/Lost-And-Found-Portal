@@ -7,6 +7,7 @@ import com.lostfound.entity.Item;
 import com.lostfound.entity.Message;
 import com.lostfound.entity.User;
 import com.lostfound.exception.ResourceNotFoundException;
+import com.lostfound.exception.UnauthorizedException;
 import com.lostfound.repository.ItemRepository;
 import com.lostfound.repository.MessageRepository;
 import com.lostfound.repository.UserRepository;
@@ -24,9 +25,9 @@ import java.util.stream.Collectors;
 public class MessageService {
 
     private final MessageRepository messageRepository;
-    private final UserRepository userRepository;
-    private final ItemRepository itemRepository;
-    private final Cloudinary cloudinary;
+    private final UserRepository    userRepository;
+    private final ItemRepository    itemRepository;
+    private final Cloudinary        cloudinary;
 
     public MessageService(MessageRepository messageRepository,
                           UserRepository userRepository,
@@ -38,9 +39,8 @@ public class MessageService {
         this.cloudinary        = cloudinary;
     }
 
-    /** Send a plain text message. */
     public MessageDto.Response sendMessage(MessageDto.SendRequest request) {
-        User sender = getCurrentUser();
+        User sender   = getCurrentUser();
         User receiver = userRepository.findById(request.getReceiverId())
                 .orElseThrow(() -> new ResourceNotFoundException("Receiver not found"));
 
@@ -61,20 +61,13 @@ public class MessageService {
         return mapToResponse(messageRepository.save(message));
     }
 
-    /**
-     * NEW: Send a message that can include an image (uploaded to Cloudinary)
-     * and/or a location string. Text content is optional.
-     */
-    public MessageDto.Response sendMessageWithMedia(Long receiverId,
-                                                    Long itemId,
-                                                    String content,
-                                                    String locationText,
+    public MessageDto.Response sendMessageWithMedia(Long receiverId, Long itemId,
+                                                    String content, String locationText,
                                                     MultipartFile image) {
-        User sender = getCurrentUser();
+        User sender   = getCurrentUser();
         User receiver = userRepository.findById(receiverId)
                 .orElseThrow(() -> new ResourceNotFoundException("Receiver not found"));
 
-        // Upload image to Cloudinary if provided
         String imageUrl = null;
         if (image != null && !image.isEmpty()) {
             try {
@@ -133,6 +126,32 @@ public class MessageService {
     public long getUnreadCount() {
         User currentUser = getCurrentUser();
         return messageRepository.countByReceiverIdAndIsReadFalse(currentUser.getId());
+    }
+
+    /**
+     * Delete a single message — only the sender is allowed.
+     */
+    @Transactional
+    public void deleteMessage(Long messageId) {
+        User currentUser = getCurrentUser();
+        Message message  = messageRepository.findById(messageId)
+                .orElseThrow(() -> new ResourceNotFoundException("Message not found"));
+        if (!message.getSender().getId().equals(currentUser.getId())) {
+            throw new UnauthorizedException("You can only delete your own messages");
+        }
+        messageRepository.deleteById(messageId);
+    }
+
+    /**
+     * Bulk delete — silently skips IDs that don't belong to the current user.
+     */
+    @Transactional
+    public void deleteMessages(List<Long> ids) {
+        User currentUser = getCurrentUser();
+        List<Message> toDelete = messageRepository.findAllById(ids).stream()
+                .filter(m -> m.getSender().getId().equals(currentUser.getId()))
+                .collect(Collectors.toList());
+        messageRepository.deleteAll(toDelete);
     }
 
     // ── Helpers ──────────────────────────────────────────────────────────────

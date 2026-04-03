@@ -21,7 +21,6 @@ public class MessageController {
         this.messageService = messageService;
     }
 
-    /** Send a plain text message (optionally referencing an item). */
     @PostMapping
     public ResponseEntity<MessageDto.Response> sendMessage(
             @Valid @RequestBody MessageDto.SendRequest request) {
@@ -29,10 +28,6 @@ public class MessageController {
                 .body(messageService.sendMessage(request));
     }
 
-    /**
-     * NEW: Send a message with an optional image attachment and/or location.
-     * Accepts multipart/form-data so the frontend can attach a file.
-     */
     @PostMapping(value = "/with-media", consumes = "multipart/form-data")
     public ResponseEntity<MessageDto.Response> sendMessageWithMedia(
             @RequestParam Long receiverId,
@@ -71,5 +66,26 @@ public class MessageController {
     @GetMapping("/unread-count")
     public ResponseEntity<Map<String, Long>> getUnreadCount() {
         return ResponseEntity.ok(Map.of("count", messageService.getUnreadCount()));
+    }
+
+    /** Delete a single message — only the sender can delete. */
+    @DeleteMapping("/{id}")
+    public ResponseEntity<Void> deleteMessage(@PathVariable Long id) {
+        messageService.deleteMessage(id);
+        return ResponseEntity.noContent().build();
+    }
+
+    /**
+     * Bulk delete messages by ID list.
+     * Body: { "ids": [1, 2, 3] }
+     * Only messages sent by the current user are deleted.
+     */
+    @DeleteMapping("/bulk")
+    public ResponseEntity<Void> deleteMessages(@RequestBody Map<String, List<Long>> body) {
+        List<Long> ids = body.get("ids");
+        if (ids != null && !ids.isEmpty()) {
+            messageService.deleteMessages(ids);
+        }
+        return ResponseEntity.noContent().build();
     }
 }

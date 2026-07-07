@@ -22,6 +22,7 @@ const AdminDashboard = () => {
   const [items,   setItems]   = useState([]);
   const [loading, setLoading] = useState(false);
   const [flash,   setFlash]   = useState({ msg: '', type: 'success' });
+  const [refreshing, setRefreshing] = useState(false);
  
   // Redirect non-admins
   useEffect(() => {
@@ -66,6 +67,37 @@ const AdminDashboard = () => {
     if (tab === 'users') loadUsers();
     if (tab === 'items') loadItems();
   }, [tab, loadStats, loadUsers, loadItems]);
+
+  // Keep stats fresh even when viewing another tab, and catch up on changes
+  // made elsewhere (e.g. a user reports a new item) whenever the admin
+  // returns to this browser tab.
+  useEffect(() => {
+    const onFocus = () => {
+      loadStats();
+      if (tab === 'users') loadUsers();
+      if (tab === 'items') loadItems();
+    };
+    const onVisibility = () => {
+      if (document.visibilityState === 'visible') onFocus();
+    };
+    window.addEventListener('focus', onFocus);
+    document.addEventListener('visibilitychange', onVisibility);
+    return () => {
+      window.removeEventListener('focus', onFocus);
+      document.removeEventListener('visibilitychange', onVisibility);
+    };
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [tab]);
+
+  const handleManualRefresh = async () => {
+    setRefreshing(true);
+    await Promise.all([
+      loadStats(),
+      tab === 'users' ? loadUsers() : Promise.resolve(),
+      tab === 'items' ? loadItems() : Promise.resolve(),
+    ]);
+    setRefreshing(false);
+  };
  
   // ── User actions ──────────────────────────────────
   const handlePromoteUser = async (id, currentRole) => {
@@ -81,6 +113,7 @@ const AdminDashboard = () => {
       // Update in place immediately
       setUsers(prev => prev.map(u => u.id === id ? { ...u, role: res.data.role } : u));
       showFlash(`User ${label}d successfully.`);
+      loadStats(); // role changes don't affect counts, but keeps everything in sync
     } catch (e) { showFlash('Failed to update role.', 'error'); }
   };
  
@@ -92,6 +125,9 @@ const AdminDashboard = () => {
       if (response.status === 204 || response.status === 200) {
         setUsers(prev => prev.filter(u => u.id !== id));
         showFlash(`User "${name}" deleted successfully.`);
+        // Deleting a user cascades to their items/messages on the backend,
+        // so Total Users AND Total Items must both refresh here.
+        loadStats();
       } else {
         showFlash('Delete may have failed — refreshing list.', 'error');
         loadUsers();
@@ -115,7 +151,7 @@ const AdminDashboard = () => {
       // Update status in place immediately
       setItems(prev => prev.map(i => i.id === id ? { ...i, status: newStatus } : i));
       showFlash(`Item marked as ${newStatus}.`);
-      if (tab === 'stats') loadStats();
+      loadStats(); // active/resolved counts change regardless of which tab is open
     } catch (e) { showFlash('Failed to update item.', 'error'); }
   };
  
@@ -129,6 +165,7 @@ const AdminDashboard = () => {
       if (response.status === 204 || response.status === 200) {
         setItems(prev => prev.filter(i => i.id !== id));
         showFlash(`Item "${title}" deleted successfully.`);
+        loadStats(); // Total Items / Active / Resolved counts must update
       } else {
         showFlash('Delete may have failed — refreshing list.', 'error');
         loadItems();
@@ -161,6 +198,14 @@ const AdminDashboard = () => {
           <h1>🛡️ Admin Panel</h1>
           <p className="admin-sub">Logged in as <strong>{user?.name}</strong> ({user?.email})</p>
         </div>
+        <button
+          className="btn-sm btn-sm-blue"
+          onClick={handleManualRefresh}
+          disabled={refreshing}
+          title="Reload the latest data from the server"
+        >
+          {refreshing ? '⏳ Refreshing…' : '🔄 Refresh'}
+        </button>
       </div>
  
       {/* Flash */}

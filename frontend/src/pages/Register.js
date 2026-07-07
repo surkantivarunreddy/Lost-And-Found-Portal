@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
 import { useAuth } from '../context/AuthContext';
 import { authService } from '../services/authService';
@@ -8,8 +8,16 @@ const Register = () => {
   const [form, setForm] = useState({ name: '', email: '', password: '', phone: '' });
   const [error, setError] = useState('');
   const [loading, setLoading] = useState(false);
-  const { login } = useAuth();
+  const { user, loading: authLoading, login } = useAuth();
   const navigate = useNavigate();
+
+  // If already logged in (e.g. user hits Back to /register), bounce straight
+  // to the dashboard instead of showing a stale sign-up form.
+  useEffect(() => {
+    if (!authLoading && user) {
+      navigate('/dashboard', { replace: true });
+    }
+  }, [authLoading, user, navigate]);
 
   const handleChange = e => setForm({ ...form, [e.target.name]: e.target.value });
 
@@ -21,7 +29,9 @@ const Register = () => {
       const res = await authService.register(form);
       const { token, ...userData } = res.data;
       login(userData, token);
-      navigate('/dashboard');
+      // replace: true swaps /register out of the history stack instead of
+      // stacking /dashboard on top of it -- fixes "Back always goes to Sign In"
+      navigate('/dashboard', { replace: true });
     } catch (err) {
       setError(err.response?.data?.message || 'Registration failed. Try again.');
     } finally {

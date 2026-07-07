@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
 import { useAuth } from '../context/AuthContext';
 import { authService } from '../services/authService';
@@ -8,8 +8,16 @@ const Login = () => {
   const [form, setForm] = useState({ email: '', password: '' });
   const [error, setError] = useState('');
   const [loading, setLoading] = useState(false);
-  const { login } = useAuth();
+  const { user, loading: authLoading, login } = useAuth();
   const navigate = useNavigate();
+
+  // If already logged in (e.g. user hits Back to /login), bounce straight to
+  // the dashboard instead of showing a stale sign-in form.
+  useEffect(() => {
+    if (!authLoading && user) {
+      navigate('/dashboard', { replace: true });
+    }
+  }, [authLoading, user, navigate]);
  
   const handleChange = e => setForm({ ...form, [e.target.name]: e.target.value });
  
@@ -21,7 +29,9 @@ const Login = () => {
       const res = await authService.login(form);
       const { token, ...userData } = res.data;
       login(userData, token);
-      navigate('/dashboard');
+      // replace: true swaps /login out of the history stack instead of
+      // stacking /dashboard on top of it -- fixes "Back always goes to Sign In"
+      navigate('/dashboard', { replace: true });
     } catch (err) {
       // ✅ Fixed: Robust error extraction — prevents crash on non-JSON or network errors
       const msg =

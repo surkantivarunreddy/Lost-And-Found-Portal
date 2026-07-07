@@ -1,0 +1,38 @@
+services:
+  # ---------- Backend: Spring Boot API (Docker) ----------
+  - type: web
+    name: lost-and-found-backend
+    runtime: docker
+    dockerfilePath: ./Dockerfile
+    plan: free
+    envVars:
+      - key: JDBC_DATABASE_URL
+        sync: false
+      - key: DB_USERNAME
+        sync: false
+      - key: DB_PASSWORD
+        sync: false
+      - key: JWT_SECRET
+        sync: false
+      - key: CORS_ORIGIN
+        value: https://lost-and-found-frontend.onrender.com
+      - key: CLOUDINARY_URL
+        sync: false
+
+  # ---------- Frontend: React static site ----------
+  - type: web
+    name: lost-and-found-frontend
+    runtime: static
+    rootDir: frontend
+    buildCommand: npm install && npm run build
+    staticPublishPath: ./build
+    envVars:
+      - key: REACT_APP_API_URL
+        value: https://lost-and-found-backend.onrender.com
+    routes:
+      # This is the fix for "refresh -> blank/failed page": every path that
+      # isn't a real static file must fall through to index.html so
+      # react-router can take over and render the right client-side route.
+      - type: rewrite
+        source: /*
+        destination: /index.html
